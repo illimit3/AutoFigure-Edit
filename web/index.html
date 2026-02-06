@@ -31,7 +31,8 @@
           <div class="field-group">
             <label class="field-label" for="provider">Provider</label>
             <select id="provider" class="input">
-              <option value="bianxie" selected>Bianxie</option>
+              <option value="jiekou" selected>JieKou.AI (接口AI)</option>
+              <option value="bianxie">Bianxie</option>
               <option value="openrouter">OpenRouter</option>
             </select>
           </div>
@@ -39,6 +40,16 @@
           <div class="field-group">
             <label class="field-label" for="apiKey">API Key</label>
             <input id="apiKey" type="password" class="input" placeholder="sk-..." />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="baseUrl">Base URL</label>
+            <input
+              id="baseUrl"
+              class="input"
+              placeholder="https://api.jiekou.ai/openai"
+            />
+            <div class="hint">OpenAI 兼容：可填 https://api.jiekou.ai/openai（避免额外拼接 /v1）。</div>
           </div>
 
           <div class="field-group">
@@ -61,7 +72,7 @@
               <input
                 id="referenceImage"
                 class="input"
-                value="refer_figure/2.png"
+                value=""
               />
               <div class="hint">Upload overrides the path above.</div>
             </div>

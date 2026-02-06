@@ -36,6 +36,7 @@ DEFAULT_PLACEHOLDER_MODE = "label"
 DEFAULT_MERGE_THRESHOLD = 0.01
 
 SVG_EDIT_CANDIDATES = [
+    ("vendor/svg-edit/editor/iife-index.html", WEB_DIR / "vendor" / "svg-edit" / "editor" / "iife-index.html"),
     ("vendor/svg-edit/editor/index.html", WEB_DIR / "vendor" / "svg-edit" / "editor" / "index.html"),
     ("vendor/svg-edit/editor.html", WEB_DIR / "vendor" / "svg-edit" / "editor.html"),
     ("vendor/svg-edit/index.html", WEB_DIR / "vendor" / "svg-edit" / "index.html"),

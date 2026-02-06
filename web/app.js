@@ -58,6 +58,7 @@
         method_text: methodText,
         provider: $("provider").value,
         api_key: $("apiKey").value.trim() || null,
+        base_url: $("baseUrl").value.trim() || null,
         optimize_iterations: parseInt($("optimizeIterations").value, 10),
         reference_image_path: $("referenceImage").value.trim() || null,
       };

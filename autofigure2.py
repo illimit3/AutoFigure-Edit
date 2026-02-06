@@ -4,6 +4,7 @@ Paper Method 到 SVG 图标替换完整流程 (Label 模式增强版 + Box合并
 支持的 API Provider：
 - openrouter: OpenRouter API (https://openrouter.ai/api/v1)
 - bianxie: Bianxie API (https://api.bianxie.ai/v1) - 使用 OpenAI SDK
+- jiekou: 接口AI API (https://api.jiekou.ai) - 文本用 OpenAI SDK，图像用 v3 专有接口
 
 占位符模式 (--placeholder_mode):
 - none: 无特殊样式（默认黑色边框）
@@ -96,9 +97,16 @@ PROVIDER_CONFIGS = {
         "default_image_model": "gemini-3-pro-image-preview",
         "default_svg_model": "gemini-3-pro-preview",
     },
+    "jiekou": {
+        "base_url": "https://api.jiekou.ai/openai",
+        "base_url_v3": "https://api.jiekou.ai/v3",
+        "default_image_model": "gemini-3-pro-image-text-to-image",
+        "default_image_edit_model": "gemini-3-pro-image-edit",
+        "default_svg_model": "gemini-3-pro-preview",
+    },
 }
 
-ProviderType = Literal["openrouter", "bianxie"]
+ProviderType = Literal["openrouter", "bianxie", "jiekou"]
 PlaceholderMode = Literal["none", "box", "label"]
 
 # Step 1 reference image settings (overridden by CLI)
@@ -135,7 +143,7 @@ def call_llm_text(
     Returns:
         LLM 响应文本
     """
-    if provider == "bianxie":
+    if provider in ("bianxie", "jiekou"):
         return _call_bianxie_text(prompt, api_key, model, base_url, max_tokens, temperature)
     else:  # openrouter
         return _call_openrouter_text(prompt, api_key, model, base_url, max_tokens, temperature)
@@ -165,7 +173,7 @@ def call_llm_multimodal(
     Returns:
         LLM 响应文本
     """
-    if provider == "bianxie":
+    if provider in ("bianxie", "jiekou"):
         return _call_bianxie_multimodal(contents, api_key, model, base_url, max_tokens, temperature)
     else:  # openrouter
         return _call_openrouter_multimodal(contents, api_key, model, base_url, max_tokens, temperature)
@@ -192,7 +200,9 @@ def call_llm_image_generation(
     Returns:
         生成的 PIL Image，失败返回 None
     """
-    if provider == "bianxie":
+    if provider == "jiekou":
+        return _call_jiekou_image_generation(prompt, api_key, model, base_url, reference_image)
+    elif provider == "bianxie":
         return _call_bianxie_image_generation(prompt, api_key, model, base_url, reference_image)
     else:  # openrouter
         return _call_openrouter_image_generation(prompt, api_key, model, base_url, reference_image)
@@ -316,6 +326,85 @@ def _call_bianxie_image_generation(
         return None
     except Exception as e:
         print(f"[Bianxie] 图像生成 API 调用失败: {e}")
+        raise
+
+
+# ============================================================================
+# JieKou.AI Provider 实现 (图像生成使用 v3 专有接口)
+# ============================================================================
+
+def _call_jiekou_image_generation(
+    prompt: str,
+    api_key: str,
+    model: str,
+    base_url: str,
+    reference_image: Optional[Image.Image] = None,
+) -> Optional[Image.Image]:
+    """使用 JieKou.AI v3 专有接口调用图像生成
+
+    文生图端点: POST https://api.jiekou.ai/v3/{model}
+    图片编辑端点: POST https://api.jiekou.ai/v3/gemini-3-pro-image-edit
+    """
+    try:
+        # 根据 base_url 推导 v3 地址
+        v3_base = PROVIDER_CONFIGS["jiekou"]["base_url_v3"]
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+
+        if reference_image is not None:
+            # 图片编辑模式
+            edit_model = PROVIDER_CONFIGS["jiekou"].get(
+                "default_image_edit_model", "gemini-3-pro-image-edit"
+            )
+            api_url = f"{v3_base}/{edit_model}"
+
+            buf = io.BytesIO()
+            reference_image.save(buf, format="PNG")
+            image_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+            payload = {
+                "prompt": prompt,
+                "image_base64s": [image_b64],
+            }
+        else:
+            # 文生图模式
+            api_url = f"{v3_base}/{model}"
+            payload = {
+                "prompt": prompt,
+            }
+
+        print(f"[JieKou] 调用图像生成: {api_url}")
+        resp = requests.post(api_url, headers=headers, json=payload, timeout=120)
+        resp.raise_for_status()
+
+        data = resp.json()
+        image_urls = data.get("image_urls", [])
+
+        if not image_urls:
+            print("[JieKou] 图像生成响应中没有 image_urls")
+            return None
+
+        # 下载第一张图
+        img_url = image_urls[0]
+        if img_url.startswith("data:image"):
+            # base64 data URI
+            pattern = r'data:image/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)'
+            match = re.search(pattern, img_url)
+            if match:
+                image_data = base64.b64decode(match.group(2))
+                return Image.open(io.BytesIO(image_data))
+            return None
+        else:
+            # HTTP URL
+            img_resp = requests.get(img_url, timeout=60)
+            img_resp.raise_for_status()
+            return Image.open(io.BytesIO(img_resp.content))
+
+    except Exception as e:
+        print(f"[JieKou] 图像生成 API 调用失败: {e}")
         raise
 
 
@@ -2169,7 +2258,7 @@ if __name__ == "__main__":
     # Provider 参数
     parser.add_argument(
         "--provider",
-        choices=["openrouter", "bianxie"],
+        choices=["openrouter", "bianxie", "jiekou"],
         default="bianxie",
         help="API 提供商（默认: bianxie）"
     )

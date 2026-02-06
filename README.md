@@ -18,13 +18,40 @@
   AutoFigure-edit is the next version of AutoFigure. It turns paper method sections into fully editable SVG figures and lets you refine them in an embedded SVG editor.
 </p>
 
-[Quick Start](#-quick-start) • [Web Interface](#-web-interface) • [How It Works](#-how-it-works) • [Configuration](#-configuration) • [Citation](#-citation--license)
+[Quick Start](#-quick-start) • [Web Interface](#-web-interface) • [How It Works](#-how-it-works) • [Configuration](#-configuration) • [Deployment](#-deployment-to-server) • [Citation](#-citation--license)
 
 [[`Paper`](https://openreview.net/forum?id=5N3z9JQJKq)]
 [[`Project`](https://github.com/ResearAI/AutoFigure)]
+[[`Deploy Guide`](DEPLOYMENT.md)]
 [[`BibTeX`](#-citation--license)]
 
 </div>
+
+---
+
+## 🚀 Deployment to Server
+
+For production deployment with GPU support, see **[DEPLOYMENT.md](DEPLOYMENT.md)** for the complete guide.
+
+Quick server setup:
+
+```bash
+git clone https://github.com/illimit3/AutoFigure-Edit.git
+cd AutoFigure-Edit
+chmod +x deploy.sh
+./deploy.sh
+```
+
+**System Requirements:**
+- Python 3.12+
+- PyTorch 2.7+
+- CUDA 12.6
+- NVIDIA GPU (16GB+ VRAM recommended)
+
+**Supported LLM Providers:**
+- 🔥 **JieKou.AI** (接口AI) - Recommended, supports Gemini 3 Pro Image generation
+- Bianxie
+- OpenRouter
 
 ---
 
